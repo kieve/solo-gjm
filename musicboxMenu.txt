@@ -1,0 +1,79 @@
+File
+    New     (C+N)
+    Save    (C+S)
+    Save As (CS + N)
+    Load    (C+L)
+    Load 2  (CS+L)
+    Upload  (F1)
+    ----
+    Exit
+
+Controls
+    Insert Section (Hold 1)
+    Remove Section (Hold 2)
+    Add Note       (Hold LMB)
+    Add Rest       (Hold MMB)
+    Remove         (Hold RMB)
+    Test Note      (Hold Alt, +Shift to raise note)
+    ----
+    Select              (LMB Drag)
+    Paste Selection     (C+V)
+    Paste (Before?) Bar (CS+V)
+    Paste Volume?       (C+B)
+    Delete              (Del)
+    ----
+    Increase Time        (Q)
+    Decrease Time        (W)
+    Link Start           (A)
+    Link End             (S)
+    Triplets             (D)
+    Dot?                 (X)
+    Skip                 (C)
+    Flat, Sharp, Natural (Z)
+    Arpeggio indicator   (V)
+    Bar Octave Move      (Up, Down)
+    ----
+    Cancel / Deselect    (Esc)
+    Play from Mouse      (Space)
+    Play from Position   (Enter)
+    Playback Speed Up    (Page Up)
+    Playback Speed Down  (Page Down)
+    Free play Mode       (F9)
+        Turns your keyboard into a piano
+    Click Mode           (F10)
+        Toggles hold to click
+    Bar Settings?       (3, Escape)
+        Pops up a dialog at mouse position
+
+Settings (Toggles)
+    Free play Mode
+    Remember sharp/flat placements
+        All notes added on the same line will have the same flat / sharp
+    Play note when adding / removing
+    Scroll to note when pressing play
+    Align when inserting notes? (Dono what this does)
+    Some animation thing (Dono what this does)
+    Click Mode
+    Show FPS
+
+About
+    About
+
+Popup Window:
+----
+Name:
+Author:
+Transformation?
+Input?
+----
+Scale?
+----
+Instrument: Piano, ?, ?, ?
+Clef: Bass, Treble
+Tuning?
+BPM
+Time Signature
+----
+Volume Curve
+Volume
+----
