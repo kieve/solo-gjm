@@ -1,0 +1,3 @@
+[submodule "proxy-music"]
+	path = proxy-music
+	url = git@github.com:kieve/proxymusic.git

@@ -7,7 +7,7 @@
 //  See https://github.com/Audiveris/proxymusic/issues for bugs & suggestions.  //
 //------------------------------------------------------------------------------//
 //
-package ca.kieve.sologjm;
+package ca.kieve.sologjm.debug;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

@@ -19,5 +19,6 @@
 
     <modules>
         <module>gjm-converter</module>
+        <module>proxy-music</module>
     </modules>
 </project>

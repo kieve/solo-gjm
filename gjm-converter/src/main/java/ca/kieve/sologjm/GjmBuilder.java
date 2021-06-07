@@ -18,12 +18,13 @@ import org.audiveris.proxymusic.Tie;
 import org.audiveris.proxymusic.Tied;
 import org.audiveris.proxymusic.Time;
 
-import javax.xml.bind.JAXBElement;
+import jakarta.xml.bind.JAXBElement;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+
+import static ca.kieve.sologjm.debug.DebugUtils.p;
 
 public class GjmBuilder {
     private enum _Clef {
@@ -138,13 +139,6 @@ public class GjmBuilder {
         List<_Note> m_notes2 = new ArrayList<>();
     }
 
-    private enum _SwingMode {
-        FORCE,
-        A,
-        B,
-        C
-    }
-
     private static final int BPM = 120;
     private static final int BASE_DURATION = 125; // MS, length of a 1/64 note. 125 = 60bpm
     private static final int GJM_PITCH_OFFSET = 4; // Octave C1 starts at 4.
@@ -167,11 +161,6 @@ public class GjmBuilder {
     public GjmBuilder(String notationName, String notationAuthor) {
         m_notationName = notationName;
         m_notationAuthor = notationAuthor;
-    }
-
-    private static void p(Object object) {
-        if (object == null) return;
-        System.out.println(new Dumper.Column(object, ""));
     }
 
     private static void uo(Object object, String message) {
@@ -248,10 +237,6 @@ public class GjmBuilder {
     }
 
     public void parseNote(Note note) {
-        parseNote(note, null, Collections.emptyList());
-    }
-
-    public void parseNote(Note note, _SwingMode swingMode, List<_Pitch> swingChords) {
         // Note: Duration type of "quarter notes" don't have a DurationType entry
         uo(note.getGrace(), "note grace");
         uo(note.getCue(), "note cue");
@@ -417,7 +402,6 @@ public class GjmBuilder {
         } else {
             if (parsedPitch != null) {
                 parsedNote.m_pitches.add(parsedPitch);
-                parsedNote.m_pitches.addAll(swingChords);
             }
             currentTrack.add(parsedNote);
         }
@@ -496,11 +480,12 @@ public class GjmBuilder {
     }
 
     public void swing() {
-        // Only care about swinging track 2, for now
+        // Only care about swinging track 1, for now
         for (_Measure measure : m_measures) {
             measure.m_notes1 = swingTrack(measure.m_notes1);
         }
     }
+
     private List<_Note> swingTrack(List<_Note> notes) {
         List<_Note> result = new ArrayList<>();
         int currentBeatTally = 0;

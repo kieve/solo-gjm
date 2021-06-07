@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<VBox xmlns="http://javafx.com/javafx"
+    xmlns:fx="http://javafx.com/fxml"
+    fx:controller="ca.kieve.sologjm.MainController"
+    prefWidth="600.0"
+    prefHeight="400.0"
+    styleClass="main">
+
+    <stylesheets>
+        <URL value="@../css/main.css"/>
+    </stylesheets>
+
+    <HBox
+        alignment="CENTER_LEFT">
+
+        <Text
+            text="Input File:">
+            <HBox.margin>
+                <Insets left="5" right="5"/>
+            </HBox.margin>
+        </Text>
+
+        <TextField
+            fx:id="m_inputPath"
+            editable="false"
+            HBox.hgrow="ALWAYS"/>
+
+        <Button
+            fx:id="m_inputPathButton"
+            text="..."/>
+    </HBox>
+
+    <CheckBox
+        fx:id="m_swingBeat"
+        text="Use Swing Beat"/>
+
+    <TextArea
+        fx:id="m_logArea"
+        editable="false"
+        VBox.vgrow="ALWAYS"/>
+
+    <Button styleClass="convertButton"
+        fx:id="m_convertButton"
+        prefWidth="Infinity"
+        minHeight="40"
+        prefHeight="40"
+        text="Save As"/>
+</VBox>

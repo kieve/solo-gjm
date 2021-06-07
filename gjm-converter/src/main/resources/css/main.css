@@ -1,0 +1,17 @@
+.main {
+    -fx-font-size: 12px;
+    -fx-font-family: sans-serif;
+    -fx-background-color: #ffffff;
+}
+
+.convertButton {
+    -fx-background-color: #00e500;
+}
+
+.convertButton:hover {
+    -fx-background-color: #00ff00;
+}
+
+.convertButton:pressed {
+    -fx-background-color: #00d900;
+}
