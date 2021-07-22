@@ -1,18 +1,28 @@
 package ca.kieve.sologjm;
 
+import org.audiveris.proxymusic.Accidental;
 import org.audiveris.proxymusic.Arpeggiate;
 import org.audiveris.proxymusic.Articulations;
 import org.audiveris.proxymusic.Attributes;
 import org.audiveris.proxymusic.Backup;
+import org.audiveris.proxymusic.BackwardForward;
+import org.audiveris.proxymusic.Barline;
 import org.audiveris.proxymusic.Clef;
 import org.audiveris.proxymusic.Direction;
+import org.audiveris.proxymusic.DirectionType;
+import org.audiveris.proxymusic.Dynamics;
 import org.audiveris.proxymusic.EmptyPlacement;
+import org.audiveris.proxymusic.Fermata;
+import org.audiveris.proxymusic.Forward;
 import org.audiveris.proxymusic.Key;
 import org.audiveris.proxymusic.Notations;
 import org.audiveris.proxymusic.Note;
 import org.audiveris.proxymusic.NoteType;
 import org.audiveris.proxymusic.Pitch;
+import org.audiveris.proxymusic.Repeat;
 import org.audiveris.proxymusic.Rest;
+import org.audiveris.proxymusic.Slide;
+import org.audiveris.proxymusic.Slur;
 import org.audiveris.proxymusic.StartStop;
 import org.audiveris.proxymusic.Tie;
 import org.audiveris.proxymusic.Tied;
@@ -20,8 +30,10 @@ import org.audiveris.proxymusic.Time;
 
 import jakarta.xml.bind.JAXBElement;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static ca.kieve.sologjm.debug.DebugUtils.p;
@@ -58,6 +70,15 @@ public class GjmBuilder {
             }
             throw new UnsupportedOperationException("Unsupported Note Duration: " + mxlId);
         }
+
+        public static _NoteType fromDurationMultiplier(int duration) {
+            for (_NoteType note : values()) {
+                if (note.m_durationMultiplier == duration) {
+                    return note;
+                }
+            }
+            throw new IllegalArgumentException("Unsupported Note Duration Multiplier: " + duration);
+        }
     }
 
     private enum _Step {
@@ -67,7 +88,7 @@ public class GjmBuilder {
         F(4, 5, 1, 7),
         G(5, 7, 3, 5),
         A(6, 9, 5, 3),
-        B(7, 10, 7, 1);
+        B(7, 11, 7, 1);
 
         private final int m_sign;
         private final int m_pitchOffset;
@@ -84,21 +105,48 @@ public class GjmBuilder {
         }
     }
 
-    private class _Pitch {
+    private enum _Accidental {
+        FLAT("Flat"),
+        NATURAL("Natural"),
+        SHARP("Sharp");
+
+        private final String m_gjmString;
+
+        _Accidental(String gjmString) {
+            m_gjmString = gjmString;
+        }
+
+        public static _Accidental fromMxl(Accidental accidental) {
+            return switch (accidental.getValue()) {
+            case FLAT -> FLAT;
+            case NATURAL -> NATURAL;
+            case SHARP -> SHARP;
+            default -> throw new IllegalArgumentException("Unsupported accidental");
+            };
+        }
+    }
+
+    private static class _Pitch {
         private int m_octave; // 0 - 9
         private _Step m_step;
-        private int m_alter; // -1 = flat, 1 = sharp, microtones not supported
+
+        // TODO: This basically automatically calculates the note based on key and alterant.
+        //       I'm ignoring this for now though.
+        private int m_alterPitch; // -1 = flat, 1 = sharp, microtones not supported
+
+        private _Accidental m_accidental = null;
 
         public _Pitch deepClone() {
             _Pitch result = new _Pitch();
             result.m_octave = m_octave;
             result.m_step = m_step;
-            result.m_alter = m_alter;
+            result.m_alterPitch = m_alterPitch;
+            result.m_accidental = m_accidental;
             return result;
         }
     }
 
-    private class _Note {
+    private static class _Note {
         private _NoteType m_noteType;
         private boolean m_isRest;
         private List<_Pitch> m_pitches = new ArrayList<>(3);
@@ -134,17 +182,43 @@ public class GjmBuilder {
         }
     }
 
-    private class _Measure {
+    private static class _Measure {
         List<_Note> m_notes1 = new ArrayList<>();
         List<_Note> m_notes2 = new ArrayList<>();
+
+        public _Measure deepClone() {
+            _Measure result = new _Measure();
+            for (_Note note : m_notes1) {
+                result.m_notes1.add(note.deepClone());
+            }
+            for (_Note note : m_notes2) {
+                result.m_notes2.add(note.deepClone());
+            }
+            return result;
+        }
     }
 
-    private static final int BPM = 120;
+    private static class _Repeat {
+        int m_startMeasure = -1; // Inclusive
+        int m_endMeasure = -1;   // Inclusive
+        int times = 1;
+    }
+
     private static final int BASE_DURATION = 125; // MS, length of a 1/64 note. 125 = 60bpm
     private static final int GJM_PITCH_OFFSET = 4; // Octave C1 starts at 4.
 
     private final String m_notationName;
     private final String m_notationAuthor;
+
+    private final int m_bpm;
+
+    private final int m_trackVolume1;
+    private final int m_trackVolume2;
+
+    // Global modifications....
+    private final boolean m_swingBeat;
+    private final int m_octaveOffset1;
+    private final int m_octaveOffset2;
 
     private int m_key = -1;
     private int m_beatsPerMeasure = -1;
@@ -154,13 +228,23 @@ public class GjmBuilder {
     private _Clef m_clef2;
 
     private List<_Measure> m_measures = new ArrayList<>();
-
     private int m_currentMeasureId = 0;
     private _Measure m_currentMeasure = new _Measure();
 
-    public GjmBuilder(String notationName, String notationAuthor) {
+    private List<_Repeat> m_repeats = new ArrayList<>();
+    private _Repeat m_currentRepeat = null;
+
+    public GjmBuilder(String notationName, String notationAuthor, int bpm, int trackVolume1,
+            int trackVolume2, boolean swingBeat, int octaveOffset1, int octaveOffset2)
+    {
         m_notationName = notationName;
         m_notationAuthor = notationAuthor;
+        m_bpm = bpm;
+        m_trackVolume1 = trackVolume1;
+        m_trackVolume2 = trackVolume2;
+        m_swingBeat = swingBeat;
+        m_octaveOffset1 = octaveOffset1;
+        m_octaveOffset2 = octaveOffset2;
     }
 
     private static void uo(Object object, String message) {
@@ -186,18 +270,25 @@ public class GjmBuilder {
         // attributes.getDivisions();
         // attributes.getStaves();
 
-        p(attributes.getKey().get(0));
-        p(attributes.getTime().get(0));
-
         List<Key> keyList = attributes.getKey();
+        if (keyList != null && keyList.size() > 0) {
+            p(attributes.getKey().get(0));
+        }
+
         if (keyList != null && !keyList.isEmpty()) {
             if (m_key >= 0 || keyList.size() > 1) {
-                throw new UnsupportedOperationException("Multiple key mapping not supported yet.");
+                for (Key key : keyList) {
+                    p(key);
+                }
+                System.out.println("WARNING: Multiple key mapping not supported yet.");
             }
             m_key = keyList.get(0).getFifths().intValue();
         }
 
         List<Time> timeList = attributes.getTime();
+        if (timeList.size() > 0) {
+            p(attributes.getTime().get(0));
+        }
         if (timeList != null && !timeList.isEmpty()) {
             if (m_beatsPerMeasure >= 0 || timeList.size() > 1) {
                 throw new UnsupportedOperationException(
@@ -216,24 +307,87 @@ public class GjmBuilder {
 
         // Clefts... This is associated and mapped to the number of staves.
         List<Clef> clefs = attributes.getClef();
-        if (clefs.get(0).getSign().value().equals("G")) {
+        if (clefs == null || clefs.isEmpty()) {
             m_clef1 = _Clef.L2G;
-        } else {
-            m_clef1 = _Clef.L4F;
-        }
-        if (clefs.get(1).getSign().value().equals("G")) {
-            m_clef2 = _Clef.L2G;
-        } else {
             m_clef2 = _Clef.L4F;
+        } else {
+            if (clefs.get(0).getSign().value().equals("G")) {
+                m_clef1 = _Clef.L2G;
+            } else {
+                m_clef1 = _Clef.L4F;
+            }
+            if (clefs.size() < 2) {
+                m_clef2 = _Clef.L4F;
+            } else if (clefs.get(1).getSign().value().equals("G")) {
+                m_clef2 = _Clef.L2G;
+            } else {
+                m_clef2 = _Clef.L4F;
+            }
         }
     }
 
     public void parseDirection(Direction direction) {
         p(direction);
+        p(direction.getSound());
+        for (DirectionType directionType : direction.getDirectionType()) {
+            p(directionType);
+            p(directionType.getMetronome());
+            if (directionType.getMetronome() != null) {
+                p(directionType.getMetronome().getPerMinute());
+            }
+            for (Dynamics dynamics : directionType.getDynamics()) {
+                p(dynamics);
+                for (JAXBElement<?> element : dynamics.getPOrPpOrPpp()) {
+                    System.out.println("POrPpOrPpp: " + element.getName());
+                }
+            }
+        }
     }
 
     public void parseBackup(Backup backup) {
         p(backup);
+    }
+
+    public void parseForward(Forward forward) {
+        uo(forward, "Forward?");
+    }
+
+    public void parseBarline(Barline barline) {
+        p(barline);
+        p(barline.getRepeat());
+
+        Repeat repeat = barline.getRepeat();
+        if (repeat == null) {
+            return;
+        }
+
+        BackwardForward direction = repeat.getDirection();
+        boolean isEnd = false;
+        if (direction == BackwardForward.FORWARD) {
+            // This is a start of a repeat
+            if (m_currentRepeat != null) {
+                throw new IllegalStateException("Nested repeats not supported");
+            }
+            m_currentRepeat = new _Repeat();
+            m_currentRepeat.m_startMeasure = m_currentMeasureId;
+        } else if (direction == BackwardForward.BACKWARD) {
+            isEnd = true;
+            // This is the end of a repeat
+            if (m_currentRepeat == null) {
+                throw new IllegalStateException("Can't repeat without a starting repeat bar");
+            }
+            m_currentRepeat.m_endMeasure = m_currentMeasureId;
+        }
+
+        BigInteger times = repeat.getTimes();
+        if (repeat.getTimes() != null) {
+            m_currentRepeat.times = times.intValue();
+        }
+
+        if (isEnd) {
+            m_repeats.add(m_currentRepeat);
+            m_currentRepeat = null;
+        }
     }
 
     public void parseNote(Note note) {
@@ -247,7 +401,6 @@ public class GjmBuilder {
         uo(note.getTimeModification(), "note timeModification");
         uo(note.getNotehead(), "note notehead");
         uo(note.getNoteheadText(), "note noteheadText");
-        uc(note.getLyric(), "note lyric");
         uo(note.getPlay(), "note play");
         uo(note.getDynamics(), "note dynamics");
         uo(note.getEndDynamics(), "note endDynamics");
@@ -271,7 +424,10 @@ public class GjmBuilder {
             for (Object object : notations.getTiedOrSlurOrTuplet()) {
                 if (!(object instanceof Tied)
                         && !(object instanceof Articulations)
-                        && !(object instanceof Arpeggiate))
+                        && !(object instanceof Arpeggiate)
+                        && !(object instanceof Slur)
+                        && !(object instanceof Slide)
+                        && !(object instanceof Fermata))
                 {
                     p(object);
                     throw new UnsupportedOperationException("Unknown notation type.");
@@ -280,7 +436,10 @@ public class GjmBuilder {
                 if (object instanceof Articulations) {
                     Articulations articulations = (Articulations) object;
                     for (JAXBElement<?> jele : articulations.getAccentOrStrongAccentOrStaccato()) {
-                        if (!jele.getName().toString().equals("staccato")) {
+                        String eleName = jele.getName().toString();
+                        if (!eleName.equals("staccato")
+                                && !eleName.equals("accent"))
+                        {
                             throw new UnsupportedOperationException(
                                     "Only staccato articulation supported: "
                                             + jele.getName().toString());
@@ -319,6 +478,11 @@ public class GjmBuilder {
 
         System.out.println("S-----------------------------------------------------------");
 
+        int staff = note.getStaff().intValue();
+        if (staff > 2 || staff < 1) {
+            throw new UnsupportedOperationException("Only supports 2 staffs: " + staff);
+        }
+
         _Note parsedNote = new _Note();
         if (note.getType() == null) {
             // If the note type isn't specified, assume it's a whole note
@@ -327,8 +491,33 @@ public class GjmBuilder {
             parsedNote.m_noteType = _NoteType.fromMxl(note.getType().getValue());
         }
 
+        // Check if it's staccato
+        boolean staccato = false;
+        for (Notations notations : note.getNotations()) {
+            for (Object object : notations.getTiedOrSlurOrTuplet()) {
+                if (object instanceof Articulations) {
+                    for (JAXBElement<?> jele
+                            : ((Articulations) object).getAccentOrStrongAccentOrStaccato())
+                    {
+                        if (jele.getName().toString().equals("staccato")) {
+                            staccato = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         if (note.getRest() != null) {
             parsedNote.m_isRest = true;
+            staccato = false;
+        }
+
+        // To emulate staccato, we're going to set the note length to 1/32 (the fastest for GJM) and
+        // fill the remaining time with rest
+        List<_Note> staccatoRests = Collections.emptyList();
+        if (staccato) {
+            staccatoRests = staccato(parsedNote);
         }
 
         Pitch pitch = note.getPitch();
@@ -339,21 +528,26 @@ public class GjmBuilder {
             }
 
             parsedPitch = new _Pitch();
-            parsedPitch.m_octave = pitch.getOctave();
+            parsedPitch.m_octave = pitch.getOctave()
+                    + (staff == 1 ? m_octaveOffset1 : m_octaveOffset2);
             if (parsedPitch.m_octave == 0) {
-                throw new UnsupportedOperationException("Octave 0 not supported");
+//                throw new UnsupportedOperationException("Octave 0 not supported");
             }
             parsedPitch.m_step = _Step.valueOf(pitch.getStep().toString());
 
-            // TODO: Fix how these are used...
             if (pitch.getAlter() != null) {
                 BigDecimal alter = pitch.getAlter();
                 if (alter.stripTrailingZeros().scale() > 0) {
                     throw new UnsupportedOperationException("Microtones not supported");
                 }
-                parsedPitch.m_alter = alter.intValue();
+                parsedPitch.m_alterPitch = alter.intValue();
             } else {
-                parsedPitch.m_alter = 0;
+                parsedPitch.m_alterPitch = 0;
+            }
+
+            Accidental accidental = note.getAccidental();
+            if (accidental != null) {
+                parsedPitch.m_accidental = _Accidental.fromMxl(accidental);
             }
         }
 
@@ -379,11 +573,6 @@ public class GjmBuilder {
             }
         }
 
-        int staff = note.getStaff().intValue();
-        if (staff > 2 || staff < 1) {
-            throw new UnsupportedOperationException("Only supports 2 staffs: " + staff);
-        }
-
         List<_Note> currentTrack = staff == 1
                 ? m_currentMeasure.m_notes1
                 : m_currentMeasure.m_notes2;
@@ -393,7 +582,16 @@ public class GjmBuilder {
                 throw new IllegalStateException("Can't chord a rest...");
             }
 
-            _Note chordNote = currentTrack.get(currentTrack.size() - 1);
+            _Note chordNote = null;
+            for (int i = currentTrack.size() - 1; i >= 0; --i) {
+                chordNote = currentTrack.get(i);
+                if (!chordNote.m_isRest) {
+                    break;
+                }
+            }
+            if (chordNote == null) {
+                throw new IllegalStateException("This shouldn't happen if you don't chord a rest.");
+            }
             chordNote.m_pitches.add(parsedPitch);
 
             // Also, connect any ties
@@ -405,6 +603,7 @@ public class GjmBuilder {
             }
             currentTrack.add(parsedNote);
         }
+        currentTrack.addAll(staccatoRests);
 
         /*
          *
@@ -451,6 +650,9 @@ public class GjmBuilder {
         /*
          * Properties I don't care about....
          *
+         * note.getLyric()
+         *     Don't care about lyrics
+         *
          * note.getStem()
          *     This is the note line going up / down, etc
          *
@@ -460,12 +662,16 @@ public class GjmBuilder {
          * note.getVoice()
          *     I have no idea what it is. It's a string, usually a number?
          *
-         * GJM doesn't support staccato
+         * GJM doesn't support slurs or accents. Nor staccatos but I kinda hacked those in.
          * note.getNotations() (list)
          *     .getTiedOrSlurOrTuplet() (list)
+         *         (Slur) object TODO: These would be nice.
+         *         (Slide) object TODO: These would be nice.
+         *         (Fermata) object TODO: This is possible.
          *         (Articulations) object
          *             .getAccentOrStrongAccentOrStaccato() (list)
-         *                 .getName().toString()k
+         *                 .getName().toString()
+         *                      Accent TODO: These would be nice
          *
          * note.getDefaultX()
          * note.getDefaultY()
@@ -479,7 +685,32 @@ public class GjmBuilder {
         System.out.println("E-----------------------------------------------------------");
     }
 
-    public void swing() {
+    private static List<_Note> staccato(_Note originalNote) {
+        if (originalNote.m_noteType.m_durationMultiplier == 2) {
+            System.out.println("WARNING: Can't staccato a 32nd note.");
+            return Collections.emptyList();
+        }
+
+        // Create our list of rests
+        List<_Note> result = new ArrayList<>();
+        for (int durationMultiplier = _NoteType.THIRTY_SECOND.m_durationMultiplier;
+             durationMultiplier < originalNote.m_noteType.m_durationMultiplier;
+             durationMultiplier *= 2)
+        {
+            _Note rest = new _Note();
+            rest.m_noteType = _NoteType.fromDurationMultiplier(durationMultiplier);
+            rest.m_isRest = true;
+            result.add(rest);
+        }
+
+        // Update the original note to be a 32nd note.
+        // Combined with the rest padding, the overall beat length is the same.
+        originalNote.m_noteType = _NoteType.THIRTY_SECOND;
+
+        return result;
+    }
+
+    private void applySwing() {
         // Only care about swinging track 1, for now
         for (_Measure measure : m_measures) {
             measure.m_notes1 = swingTrack(measure.m_notes1);
@@ -554,6 +785,47 @@ public class GjmBuilder {
         return result;
     }
 
+    private void applyRepeats() {
+        List<_Measure> result = new ArrayList<>();
+        int measurePosition = 0;
+        for (_Repeat repeat : m_repeats) {
+            // Copy from measurePosition to the start of this section
+            for (int i = measurePosition; i < repeat.m_startMeasure; ++i) {
+                result.add(m_measures.get(i).deepClone());
+            }
+
+            // Copy in this repeat for the original run, then the second time.
+            // times = 1 means copy it in twice
+            // times = 2 means copy it thrice, etc
+            // copy times + 1
+            // Which is the same as starting the count from zero.
+            for (int count = 0; count <= repeat.times; ++count) {
+                for (int i = repeat.m_startMeasure; i <= repeat.m_endMeasure; ++i) {
+                    result.add(m_measures.get(i).deepClone());
+                }
+            }
+            measurePosition = repeat.m_endMeasure + 1;
+        }
+
+        // Copy to the end of the song
+        for (int i = measurePosition; i < m_measures.size(); ++i) {
+            result.add(m_measures.get(i).deepClone());
+        }
+
+        // Set this as our final song set.
+        m_measures = result;
+    }
+
+    public void postProcess() {
+        if (m_swingBeat) {
+            applySwing();
+        }
+
+        // Do this last, as it copies measures. Previous post-processing should be done before
+        // the measure copying
+        applyRepeats();
+    }
+
     public String writeGjm() {
         // Header data
         IndentingStringBuilder sb = new IndentingStringBuilder("\t")
@@ -569,7 +841,7 @@ public class GjmBuilder {
                     .li("BeatDurationType = 'Quarter',") // TODO: Support others
                     .li("NumberedKeySignature = 'C',") // TODO: Figure out how to read this from MXL
                     .push("MeasureBeatsPerMinuteMap = {")
-                        .li("{ 0, %d },", BPM) // TODO: Support different BPM per measure. Also, figure out how to read this from MXL
+                        .li("{ 0, %d },", m_bpm) // TODO: Support different BPM per measure. Also, figure out how to read this from MXL
                     .pop("},")
                     .li("MeasureAlignedCount = %d,", m_measures.size())
                 .pop("}")
@@ -594,6 +866,9 @@ public class GjmBuilder {
             clef = m_clef2;
         }
 
+        String trackVolume1 = m_trackVolume1 == 100 ? "1.00" : "0." + m_trackVolume1;
+        String trackVolume2 = m_trackVolume2 == 100 ? "1.00" : "0." + m_trackVolume2;
+
         sb.push("[" + trackIndex + "] = {")
                 .push("MeasureKeySignatureMap = {") // TODO: Support multiple keys
                     .li("{ 0, %d },", m_key)
@@ -608,7 +883,7 @@ public class GjmBuilder {
                     .li("{ 0, { 0.8, 0.7, 0.5, 0.5, 0.7, 0.6, 0.5, 0.4, } },")
                 .pop("},")
                 .push("MeasureVolumeMap = {")
-                    .li("{ 0, %s },", trackIndex == 0 ? "1" : "0.7")
+                    .li("{ 0, %s },", trackIndex == 0 ? trackVolume1 : trackVolume2)
                 .pop("},");
 
         int i = 0;
@@ -667,7 +942,7 @@ public class GjmBuilder {
 
                 sb.li("StampIndex = %d,", stampIndex);
 
-                int duration = (int) Math.round(BASE_DURATION * (60 / (double) BPM))
+                int duration = (int) Math.round(BASE_DURATION * (60 / (double) m_bpm))
                         * note.m_noteType.m_durationMultiplier;
                 if (note.m_isSwing) {
                     duration = (int) Math.round(duration * note.m_swingDurationMultiplier);
@@ -686,19 +961,28 @@ public class GjmBuilder {
                             + pitch.m_step.m_pitchOffset;
 
                     int offset = 0;
-                    if (m_key < 0 && pitch.m_step.m_flatScale <= m_key) {
-                        offset--;
-                    } else if (m_key > 0 && pitch.m_step.m_sharpScale >= m_key) {
-                        offset++;
+                    String alter = "NoControl";
+
+                    if (pitch.m_accidental == null) {
+                        if (m_key < 0 && pitch.m_step.m_flatScale <= Math.abs(m_key)) {
+                            offset--;
+                        } else if (m_key > 0 && pitch.m_step.m_sharpScale <= m_key) {
+                            offset++;
+                        }
+                    } else {
+                        switch (pitch.m_accidental) {
+                        case FLAT -> offset--;
+                        case SHARP -> offset++;
+                        }
+                        alter = pitch.m_accidental.m_gjmString;
                     }
 
-                    noteIndex += offset;
+                    int pitchIndex = noteIndex + offset;
 
-                    // TODO: have to manually calculate key signature
-                    // If the key is sharp / flat, have to maybe manually map that?
-                    int pitchIndex = noteIndex;// + pitch.m_alter;
-
-                    String alter = "NoControl";
+//                    sb.li("noteIndex = " + noteIndex
+//                            + " offset = " + offset
+//                            + " pitchIndex = " + pitchIndex
+//                            + " alter = " + pitch.m_alterPitch);
 
                     sb.li("[%d] = { "
                             + "NumberedSign = %d, "

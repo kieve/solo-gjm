@@ -74,7 +74,8 @@ public class MainController implements LogManager.Listener {
 
         m_convertButton.setOnMouseClicked(event -> {
             try {
-                m_mxlParser.parse(m_inputFile, m_swingBeat.isSelected());
+                m_mxlParser.parse(m_inputFile, "songTitle", "songAuthor", 120, 100, 40,
+                        m_swingBeat.isSelected(), 0, 0);
                 File saveFile = m_outputChooser.showSaveDialog(m_stage);
                 saveFile.delete();
                 BufferedWriter bw = new BufferedWriter(new FileWriter(saveFile));
