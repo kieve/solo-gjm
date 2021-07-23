@@ -4,6 +4,11 @@
     -fx-background-color: #ffffff;
 }
 
+.error {
+    -fx-text-box-border: red ;
+    -fx-focus-color: red ;
+}
+
 .convertButton {
     -fx-background-color: #00e500;
 }

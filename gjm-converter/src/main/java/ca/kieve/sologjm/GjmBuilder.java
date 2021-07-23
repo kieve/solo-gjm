@@ -418,7 +418,6 @@ public class GjmBuilder {
         uo(note.getPrintDot(), "note printDot");
         uo(note.getPrintLyric(), "note printLyric");
         uo(note.getPrintSpacing(), "note printSpacing");
-        uo(note.getPrintObject(), "note printObject");
 
         for (Notations notations : note.getNotations()) {
             for (Object object : notations.getTiedOrSlurOrTuplet()) {
@@ -531,7 +530,7 @@ public class GjmBuilder {
             parsedPitch.m_octave = pitch.getOctave()
                     + (staff == 1 ? m_octaveOffset1 : m_octaveOffset2);
             if (parsedPitch.m_octave == 0) {
-//                throw new UnsupportedOperationException("Octave 0 not supported");
+                System.out.println("Warning: Octave 0 not officially supported by SOLO");
             }
             parsedPitch.m_step = _Step.valueOf(pitch.getStep().toString());
 
@@ -652,6 +651,9 @@ public class GjmBuilder {
          *
          * note.getLyric()
          *     Don't care about lyrics
+         *
+         * note.getPrintObject()
+         *     Don't care about random stuff printed on the page.
          *
          * note.getStem()
          *     This is the note line going up / down, etc

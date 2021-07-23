@@ -8,7 +8,7 @@ REM Package
 jpackage ^
     --name SoloGJM ^
     --vendor "kieve" ^
-    --app-version 1.0 ^
+    --app-version 1.1 ^
     --module ca.kieve.sologjm/ca.kieve.sologjm.Main ^
     --module-path target/lib;target/classes ^
     --win-dir-chooser ^

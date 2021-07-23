@@ -9,6 +9,7 @@
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Slider?>
 <VBox xmlns="http://javafx.com/javafx"
     xmlns:fx="http://javafx.com/fxml"
     fx:controller="ca.kieve.sologjm.MainController"
@@ -22,11 +23,14 @@
 
     <HBox
         alignment="CENTER_LEFT">
+        <VBox.margin>
+            <Insets left="5" bottom="10"/>
+        </VBox.margin>
 
         <Text
             text="Input File:">
             <HBox.margin>
-                <Insets left="5" right="5"/>
+                <Insets right="22"/>
             </HBox.margin>
         </Text>
 
@@ -40,9 +44,168 @@
             text="..."/>
     </HBox>
 
+    <HBox
+        prefWidth="100"
+        alignment="CENTER_LEFT">
+        <VBox.margin>
+            <Insets left="5" bottom="5"/>
+        </VBox.margin>
+
+        <Text
+            text="Song Title:">
+            <HBox.margin>
+                <Insets right="17"/>
+            </HBox.margin>
+        </Text>
+
+        <TextField
+            fx:id="m_songTitle"
+            HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <HBox
+        alignment="CENTER_LEFT">
+        <VBox.margin>
+            <Insets left="5" bottom="10"/>
+        </VBox.margin>
+
+        <Text
+            text="Song Author:">
+            <HBox.margin>
+                <Insets right="5"/>
+            </HBox.margin>
+        </Text>
+
+        <TextField
+            fx:id="m_songAuthor"
+            HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <HBox
+        alignment="CENTER_LEFT">
+        <VBox.margin>
+            <Insets left="5" bottom="10"/>
+        </VBox.margin>
+
+        <Text
+            text="BPM:">
+            <HBox.margin>
+                <Insets right="5"/>
+            </HBox.margin>
+        </Text>
+
+        <TextField
+            fx:id="m_bpmField"
+            prefWidth="40">
+
+            <HBox.margin>
+                <Insets right="10"/>
+            </HBox.margin>
+        </TextField>
+
+        <Slider
+            fx:id="m_bpmSlider"
+            HBox.hgrow="ALWAYS"
+            min="20"
+            max="220"
+            minorTickCount="1"
+            majorTickUnit="10"
+            snapToTicks="true"
+            showTickLabels="true"
+            value="120">
+            <HBox.margin>
+                <Insets right="15"/>
+            </HBox.margin>
+        </Slider>
+    </HBox>
+
+    <Text
+        text="Volume">
+        <VBox.margin>
+            <Insets left="5"/>
+        </VBox.margin>
+    </Text>
+
+    <HBox
+        alignment="CENTER_LEFT">
+        <VBox.margin>
+            <Insets left="5"/>
+        </VBox.margin>
+
+        <Text
+            text="Staff 1:">
+            <HBox.margin>
+                <Insets right="5"/>
+            </HBox.margin>
+        </Text>
+
+        <TextField
+            fx:id="m_track1VolumeField"
+            prefWidth="40">
+
+            <HBox.margin>
+                <Insets right="10"/>
+            </HBox.margin>
+        </TextField>
+
+        <Slider
+            fx:id="m_track1VolumeSlider"
+            HBox.hgrow="ALWAYS"
+            minorTickCount="1"
+            majorTickUnit="10"
+            snapToTicks="true"
+            showTickLabels="true"
+            value="100">
+            <HBox.margin>
+                <Insets right="15"/>
+            </HBox.margin>
+        </Slider>
+    </HBox>
+
+    <HBox
+        alignment="CENTER_LEFT">
+        <VBox.margin>
+            <Insets left="5" bottom="10"/>
+        </VBox.margin>
+
+        <Text
+            text="Staff 2:">
+            <HBox.margin>
+                <Insets right="5"/>
+            </HBox.margin>
+        </Text>
+
+        <TextField
+            fx:id="m_track2VolumeField"
+            prefWidth="40">
+
+            <HBox.margin>
+                <Insets right="10"/>
+            </HBox.margin>
+        </TextField>
+
+        <Slider
+            fx:id="m_track2VolumeSlider"
+            HBox.hgrow="ALWAYS"
+            minorTickCount="1"
+            majorTickUnit="10"
+            snapToTicks="true"
+            showTickLabels="true"
+            value="40">
+            <HBox.margin>
+                <Insets right="15"/>
+            </HBox.margin>
+        </Slider>
+    </HBox>
+
     <CheckBox
         fx:id="m_swingBeat"
-        text="Use Swing Beat"/>
+        text="Use Swing Beat (You probably don't want this.)">
+
+        <VBox.margin>
+            <Insets left="5" bottom="5"/>
+        </VBox.margin>
+    </CheckBox>
 
     <TextArea
         fx:id="m_logArea"
